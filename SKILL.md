@@ -12,9 +12,23 @@ One local panel that merges the previous `git-acp` / `gitee-acp` / `gh-gitee-syn
 Start the bundled panel headless and use its compact JSON API to reduce token usage.
 
 - Studio directory: `C:\Users\Razer\Documents\Codex\2026-09-20\y\acp-studio` (override with `ACP_STUDIO_DIR`).
-- Start it headless: `python "<ACP_STUDIO_DIR>\server.py" --no-browser`.
 - Base URL: `http://127.0.0.1:8790` (port override: `ACP_STUDIO_PORT`).
 - Verify with `GET /api/health`.
+
+### Launching inside the Codex sandbox
+
+Do **not** use `Start-Process` / `Start-Job` to run the panel in the background. Those detach a
+process outside the tracked sandbox tree, so the `sandbox_approval` policy rejects the call.
+
+Start the panel as a **foreground process in an exec PTY session** instead:
+
+    python "<ACP_STUDIO_DIR>\server.py" --no-browser
+
+- Run that command with `tty: true`; the server keeps running and the exec tool returns a session id.
+- Poll `GET /api/health` until it returns `ok`.
+- Keep the session open while calling the JSON API below.
+- If `/api/health` already answers, do not start a second instance (avoids a port conflict).
+- Stop it with Ctrl+C via `write_stdin` (`\u0003`) when finished, or leave it running.
 
 Endpoints:
 
@@ -32,6 +46,27 @@ Still build the commit message yourself with the table below. If acp-studio is m
 3. `git add -A` (unless specific paths are named).
 4. `git commit -m "<emoji> <type>(<scope>): <subject>"`.
 5. Push to `origin` (GitHub) or `gitee` (Gitee); for Gitee use `-c http.sslBackend=openssl` and `GITEE_USERNAME`/`GITEE_TOKEN`.
+
+## GitHub push: sandbox specifics
+
+When the panel is not running or cannot authenticate, push directly with git. On this machine the sandbox has a few
+quirks worth handling in the push command:
+
+- Clear stale proxy env vars first: `HTTP_PROXY` / `HTTPS_PROXY` / `ALL_PROXY` are often set to `http://127.0.0.1:9`.
+- Use `-c http.sslBackend=openssl`; the default schannel backend can fail with `SEC_E_NO_CREDENTIALS`.
+- Prefer inline auth `https://<github_user>:<GITHUB_TOKEN>@github.com/<owner>/<repo>.git`, plus
+  `-c credential.helper=` so git never opens an interactive prompt.
+- Never write the token into repo config; read it from `secrets.cmd` / `GITHUB_TOKEN` and redact it from output.
+- Error meanings:
+  - `remote: Invalid username or token` = token is wrong/expired.
+  - `remote: Permission to <repo> denied` = token is valid but lacks write access; use a classic PAT with `repo`
+    scope, or a fine-grained PAT with `Contents: Read and write` for that repository.
+
+`secrets.cmd` notes:
+
+- It is a batch config file, not a double-clickable app; double-clicking flashes and exits. Edit it in a text editor.
+- The panel reads `GITHUB_TOKEN` from the environment; its `start.cmd` sources `secrets.cmd`, so run the panel via
+  `start.cmd` (or export the variable) to make newly added tokens take effect.
 
 ## Types and emoji
 
