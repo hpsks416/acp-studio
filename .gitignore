@@ -16,3 +16,5 @@ venv/
 # OS junk
 .DS_Store
 Thumbs.db
+# local credentials (copy secrets.cmd.example -> secrets.cmd)
+secrets.cmd
