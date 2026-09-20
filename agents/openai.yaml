@@ -1,0 +1,4 @@
+interface:
+  display_name: "ACP Studio"
+  short_description: "GitHub + Gitee commit and sync"
+  default_prompt: "Use $acp-studio to commit and push to GitHub or Gitee, or run the GitHub-Gitee sync."

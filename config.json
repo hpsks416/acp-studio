@@ -1,0 +1,12 @@
+{
+  "git_path": "",
+  "host": "127.0.0.1",
+  "port": 8790,
+  "state_file": "state.json",
+  "github_remote": "origin",
+  "gitee_remote": "gitee",
+  "github_user": "hpsks416",
+  "gitee_user": "",
+  "gitee_token": "",
+  "use_openssl": true
+}
