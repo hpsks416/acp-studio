@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Bidirectional sync between GitHub and Gitee mirrors.
+"""One-way or two-way sync between GitHub and Gitee mirrors.
 
-For each repo it fetches all branches and tags from both remotes and
-fast-forwards missing commits in both directions. Diverged branches are
-reported and skipped (never force-pushed). Use --watch for continuous sync.
+For each repo it fetches all branches and tags from both remotes, then pushes
+missing commits along the selected direction. Diverged branches are reported
+and skipped (never force-pushed). Use --direction to choose the direction and
+--watch for continuous sync.
 
 Environment:
   GITEE_USERNAME / GITEE_TOKEN   Gitee login and personal access token (push)
@@ -122,6 +123,26 @@ class Syncer:
         print("  pushed %s -> %s" % (sha[:8], f"{remote}/{dst_ref}"))
         return True
 
+    def _push_tags(self, mirror, remote, b64, redact):
+        if self.args.dry_run:
+            print(f"  [dry-run] push --tags {remote}")
+        else:
+            self._git(mirror, "push", remote, "--tags", b64=b64, redact=redact)
+
+    def _sync_branch(self, mirror, src_sha, dst_sha, dst_remote, dst_ref, b64, redact):
+        """Push src_sha to dst_remote only when it fast-forwards dst_sha."""
+        if not src_sha:
+            return "same"
+        if dst_sha is None:
+            self.push_ref(mirror, dst_remote, src_sha, dst_ref, b64, redact)
+            return "pushed"
+        if src_sha == dst_sha:
+            return "same"
+        if is_ancestor(mirror, dst_sha, src_sha):
+            self.push_ref(mirror, dst_remote, src_sha, dst_ref, b64, redact)
+            return "pushed"
+        return "diverged"
+
     def sync_repo(self, repo: str) -> str:
         mirror = self.cache / (repo + ".git")
         mirror.mkdir(parents=True, exist_ok=True)
@@ -145,35 +166,35 @@ class Syncer:
             remote, _, b = line.partition("/")
             if remote in ("gh", "gitee") and b:
                 branches.add(b)
+
+        direction = self.args.direction
         changed = 0
         diverged = 0
         for b in sorted(branches):
             gh_sha = rev_parse(mirror, f"refs/remotes/gh/{b}")
             gitee_sha = rev_parse(mirror, f"refs/remotes/gitee/{b}")
-            if gh_sha and not gitee_sha:
-                self.push_ref(mirror, "gitee", gh_sha, f"refs/heads/{b}", self.gitee_b64, redact)
-                changed += 1
-            elif gitee_sha and not gh_sha:
-                self.push_ref(mirror, "gh", gitee_sha, f"refs/heads/{b}", self.gh_b64, redact)
-                changed += 1
-            elif gh_sha and gitee_sha and gh_sha != gitee_sha:
-                if is_ancestor(mirror, gitee_sha, gh_sha):
-                    self.push_ref(mirror, "gitee", gh_sha, f"refs/heads/{b}", self.gitee_b64, redact)
+            if direction in ("both", "github-to-gitee"):
+                result = self._sync_branch(mirror, gh_sha, gitee_sha, "gitee", f"refs/heads/{b}", self.gitee_b64, redact)
+                if result == "pushed":
                     changed += 1
-                elif is_ancestor(mirror, gh_sha, gitee_sha):
-                    self.push_ref(mirror, "gh", gitee_sha, f"refs/heads/{b}", self.gh_b64, redact)
-                    changed += 1
-                else:
+                elif result == "diverged":
                     print(f"  diverged branch '{b}' (gh={gh_sha[:8]} gitee={gitee_sha[:8]}): skipped, needs manual merge")
                     diverged += 1
+            if direction in ("both", "gitee-to-github"):
+                result = self._sync_branch(mirror, gitee_sha, gh_sha, "gh", f"refs/heads/{b}", self.gh_b64, redact)
+                if result == "pushed":
+                    changed += 1
+                elif result == "diverged":
+                    print(f"  diverged branch '{b}' (gitee={gitee_sha[:8]} gh={gh_sha[:8]}): skipped, needs manual merge")
+                    diverged += 1
 
-        for remote, b64 in (("gh", self.gh_b64), ("gitee", self.gitee_b64)):
-            if self.args.dry_run:
-                print(f"  [dry-run] push --tags {remote}")
-            else:
-                self._git(mirror, "push", remote, "--tags", b64=b64, redact=redact)
+        if direction in ("both", "github-to-gitee"):
+            self._push_tags(mirror, "gitee", self.gitee_b64, redact)
+        if direction in ("both", "gitee-to-github"):
+            self._push_tags(mirror, "gh", self.gh_b64, redact)
 
-        return f"synced(changes={changed}, diverged={diverged})"
+        return f"synced(direction={direction}, changes={changed}, diverged={diverged})"
+
 
     def run(self) -> int:
         repos = self.args.repos if self.args.repos else DEFAULT_REPOS
@@ -196,9 +217,11 @@ class Syncer:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Bidirectional GitHub <-> Gitee sync")
+    parser = argparse.ArgumentParser(description="GitHub <-> Gitee sync (one-way or two-way)")
     parser.add_argument("--repos", nargs="*", help="repo names to sync (default: built-in list)")
     parser.add_argument("--cache", default=str(Path.home() / ".cache" / "gh-gitee-sync"), help="bare mirror cache dir")
+    parser.add_argument("--direction", choices=["both", "github-to-gitee", "gitee-to-github"], default="both",
+                        help="sync direction: both (two-way), github-to-gitee, or gitee-to-github")
     parser.add_argument("--watch", action="store_true", help="run continuously")
     parser.add_argument("--interval", type=int, default=300, help="seconds between runs in --watch mode")
     parser.add_argument("--dry-run", action="store_true", help="print actions without pushing")

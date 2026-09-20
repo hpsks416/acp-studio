@@ -21,7 +21,7 @@ Endpoints:
 1. Inspect: `GET /api/repo?repo=<absolute repo path>` returns branch, GitHub/Gitee remotes, ahead/behind, staged/unstaged/untracked files, and recent commits. If there is nothing to commit, stop and say so.
 2. Commit + optional push: `POST /api/commit` with `{"repo_path":"<absolute path>","message":"<emoji> <type>(<scope>): <subject>","push":true|false,"target":"github|gitee"}`.
 3. Push only: `POST /api/push` with `{"repo_path":"<absolute path>","target":"github|gitee"}`.
-4. Sync once: `POST /api/sync` with `{"repos":[],"dry_run":false}` runs `scripts/sync_github_gitee.py` once and returns its output.
+4. Sync once: `POST /api/sync` with `{"repos":[],"dry_run":false,"direction":"github-to-gitee"}` runs `scripts/sync_github_gitee.py` once in the chosen direction and returns its output. Directions: `github-to-gitee`, `gitee-to-github`, `both`.
 
 Still build the commit message yourself with the table below. If acp-studio is missing or `/api/health` fails, fall back to direct git.
 
@@ -65,6 +65,7 @@ When creating or initializing a repository without a specified license, default 
 - Credentials come from `GITEE_USERNAME`/`GITEE_TOKEN` and `GITHUB_TOKEN` (or `gh auth token`); never write them into repo config, and redact them from output.
 - New Gitee repositories default to public + MIT; after creating, verify visibility and PATCH `private=false` if Gitee returned private.
 - The sync script is fast-forward only and never force-pushes; diverged branches are reported and skipped.
+- Sync is one-way by default (`github-to-gitee`); choose `gitee-to-github` for the reverse direction, or `both` to run the two one-way directions in one pass.
 
 ## References
 

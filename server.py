@@ -339,11 +339,12 @@ def do_commit(cfg: dict, repo: Path, message: str, push: bool, target: str) -> d
     return result
 
 
-def do_sync(cfg: dict, repos: list[str], dry_run: bool) -> dict:
+def do_sync(cfg: dict, repos: list[str], dry_run: bool, direction: str) -> dict:
     script = ROOT / "scripts" / "sync_github_gitee.py"
     if not script.exists():
         return {"ok": False, "out": "scripts/sync_github_gitee.py 不存在"}
-    cmd = [sys.executable, str(script)]
+    direction = direction if direction in ("both", "github-to-gitee", "gitee-to-github") else "both"
+    cmd = [sys.executable, str(script), "--direction", direction]
     if dry_run:
         cmd += ["--dry-run"]
     repos = [r for r in (repos or []) if str(r).strip()]
@@ -416,7 +417,7 @@ class Handler(BaseHTTPRequestHandler):
             target = body.get("target") or "github"
             self._send_json(do_push(cfg, repo, target))
         elif path == "/api/sync":
-            self._send_json(do_sync(cfg, body.get("repos", []), bool(body.get("dry_run"))))
+            self._send_json(do_sync(cfg, body.get("repos", []), bool(body.get("dry_run")), body.get("direction", "both")))
         else:
             self._send_json({"ok": False, "error": "unknown endpoint"}, 404)
 

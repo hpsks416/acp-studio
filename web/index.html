@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>acp-studio · GitHub / Gitee / 双向同步</title>
+  <title>acp-studio · GitHub / Gitee / 同步</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -12,7 +12,7 @@
       <span class="logo">✱</span>
       <div>
         <h1>acp-studio</h1>
-        <p class="tagline">GitHub · Gitee · 双向同步</p>
+        <p class="tagline">GitHub · Gitee · 同步</p>
       </div>
     </div>
     <div class="repo-bar">
@@ -92,8 +92,16 @@
       <h3 class="list-heading">最近提交</h3>
       <ul id="log" class="log empty">—</ul>
 
-      <h3 class="list-heading">GitHub ⇄ Gitee 双向同步</h3>
+      <h3 class="list-heading">GitHub / Gitee 同步</h3>
       <div class="sync-row">
+        <label class="field">
+          <span>方向</span>
+          <select id="sync-direction">
+            <option value="github-to-gitee">GitHub → Gitee</option>
+            <option value="gitee-to-github">Gitee → GitHub</option>
+            <option value="both">双向（both）</option>
+          </select>
+        </label>
         <label class="check"><input id="sync-dry" type="checkbox"><span>dry-run</span></label>
         <button id="sync" class="btn" type="button">运行同步脚本一次</button>
       </div>

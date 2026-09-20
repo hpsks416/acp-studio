@@ -1,6 +1,6 @@
 # acp-studio
 
-把原来的 `git-acp`、`gitee-acp`、`gh-gitee-sync` 三个技能合并成一个本地项目 + 一个可视化界面 + 一个 SKILL：在一个网页里完成 GitHub 提交、Gitee 提交，以及 GitHub ⇄ Gitee 双向同步。
+把原来的 `git-acp`、`gitee-acp`、`gh-gitee-sync` 三个技能合并成一个本地项目 + 一个可视化界面 + 一个 SKILL：在一个网页里完成 GitHub 提交、Gitee 提交，以及 GitHub ⇄ Gitee 同步（支持 GitHub → Gitee / Gitee → GitHub 两个单向，也支持双向）。
 
 零第三方依赖，仅需 Python 3.9+ 标准库和本机 `git`。
 
@@ -10,7 +10,7 @@
 
 - [`gacp-studio`](https://github.com/hpsks416/gacp-studio)：GitHub 提交面板原型（前端结构来源）。
 - [`gacpee-studio`](https://github.com/hpsks416/gacpee-studio)：Gitee 提交面板原型（Gitee 推送与凭据逻辑来源）。
-- [`gh-gitee-sync`](https://github.com/hpsks416/gh-gitee-sync)：双向同步脚本来源（`scripts/sync_github_gitee.py`）。
+- [`gh-gitee-sync`](https://github.com/hpsks416/gh-gitee-sync)：同步脚本来源（`scripts/sync_github_gitee.py`）。
 
 ## 功能
 
@@ -18,7 +18,7 @@
 - Conventional Commits + Gitmoji 提交信息组装与实时预览。
 - 一键 `add + commit + push`，或只提交不推送。
 - 工作区状态：分支、GitHub/Gitee 远端、领先/落后、暂存/未暂存/未跟踪、最近提交。
-- 内置“GitHub ⇄ Gitee 双向同步”按钮，一键运行同步脚本（支持 dry-run）。
+- 内置“GitHub → Gitee / Gitee → GitHub”单向同步（也支持双向），一键运行同步脚本（支持 dry-run）。
 - Gitee/GitHub 推送自动走 `http.sslBackend=openssl` 兜底，令牌自动脱敏。
 - 仅监听 `127.0.0.1`，不对外暴露。
 
@@ -27,7 +27,7 @@
 ```
 acp-studio/
 ├── server.py                    # 零依赖本地 HTTP 服务（静态文件 + JSON API）
-├── scripts/sync_github_gitee.py # 双向同步脚本（来自 gh-gitee-sync）
+├── scripts/sync_github_gitee.py # 单向/双向同步脚本（来自 gh-gitee-sync）
 ├── SKILL.md                     # Codex 技能
 ├── agents/openai.yaml           # 界面元数据
 ├── start.cmd / start.sh         # 启动脚本
@@ -65,7 +65,7 @@ python server.py
 | GET | `/api/repo?repo=<abs>` | 工作区状态（含 GitHub/Gitee 远端） |
 | POST | `/api/commit` | `{repo_path, message, push, target}` 提交并可选推送 |
 | POST | `/api/push` | `{repo_path, target}` 仅推送 |
-| POST | `/api/sync` | `{repos, dry_run}` 运行一次双向同步 |
+| POST | `/api/sync` | `{repos, dry_run, direction}` 运行一次单向/双向同步 |
 | GET/POST | `/api/state` | UI 状态持久化 |
 | GET | `/api/types` | Conventional Commits 类型 |
 
@@ -79,4 +79,4 @@ python server.py
 
 ## 免责声明
 
-本工具会执行真实的 `git add / commit / push` 与双向同步，请在执行前确认目标仓库与提交信息无误，并妥善保管私人令牌。
+本工具会执行真实的 `git add / commit / push` 与同步，请在执行前确认目标仓库与提交信息无误，并妥善保管私人令牌。

@@ -23,6 +23,7 @@ const els = {
   log: $("#log"),
   sync: $("#sync"),
   syncDry: $("#sync-dry"),
+  syncDirection: $("#sync-direction"),
   output: $("#output"),
   clearOutput: $("#clear-output"),
 };
@@ -245,12 +246,14 @@ async function doSync() {
   busy = true;
   els.sync.disabled = true;
   els.sync.textContent = "同步中…";
-  log("运行双向同步脚本…");
+  const direction = els.syncDirection.value;
+  const label = { "github-to-gitee": "GitHub → Gitee", "gitee-to-github": "Gitee → GitHub", "both": "双向" }[direction] || direction;
+  log(`运行同步脚本一次（${label}）…`);
   try {
     const data = await api("/api/sync", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ repos: [], dry_run: els.syncDry.checked }),
+      body: JSON.stringify({ repos: [], dry_run: els.syncDry.checked, direction }),
     });
     if (data.out) log(data.out);
     log(data.ok ? "同步完成 ✓" : "同步失败", data.ok ? undefined : "error");
