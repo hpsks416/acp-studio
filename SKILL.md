@@ -1,11 +1,15 @@
 ---
 name: acp-studio
-description: Unified local panel for GitHub commit, Gitee commit, and GitHub-to-Gitee sync, replacing git-acp, gitee-acp, and gh-gitee-sync. Use when the user asks to commit, submit, push, or sync their work to GitHub and/or Gitee.
+description: Unified local panel for GitHub commit, Gitee commit, and GitHub-to-Gitee sync, replacing git-acp, gitee-acp, and gh-gitee-sync. Always run secret-scan first before committing or pushing. Use when the user asks to commit, submit, push, or sync their work to GitHub and/or Gitee.
 ---
 
 # ACP Studio (GitHub · Gitee · 双向同步)
 
 One local panel that merges the previous `git-acp` / `gitee-acp` / `gh-gitee-sync` skills: commit and push to GitHub or Gitee, and run the bidirectional sync script once.
+
+## Step 0 — secret scan first (mandatory)
+
+Before any commit, push, or sync, first invoke the `secret-scan` skill to audit the target repository for leaked credentials, `.env` files, private keys, API tokens, and other risky filenames. Only proceed once the scan is clean. If anything is flagged, report the redacted findings and stop until they are removed or excluded — never commit or push flagged secrets.
 
 ## Preferred path: local acp-studio
 
@@ -52,11 +56,13 @@ Still build the commit message yourself with the table below. If acp-studio is m
 When the panel is not running or cannot authenticate, push directly with git. On this machine the sandbox has a few
 quirks worth handling in the push command:
 
-- Clear stale proxy env vars first: `HTTP_PROXY` / `HTTPS_PROXY` / `ALL_PROXY` are often set to `http://127.0.0.1:9`.
+- Proxy: GitHub needs `-c http.proxy=http://127.0.0.1:7897` (real proxy, registry `ProxyEnable=1`); Gitee connects directly. A legacy `127.0.0.1:9` proxy note is stale — ignore it.
 - Use `-c http.sslBackend=openssl`; the default schannel backend can fail with `SEC_E_NO_CREDENTIALS`.
 - Prefer inline auth `https://<github_user>:<GITHUB_TOKEN>@github.com/<owner>/<repo>.git`, plus
   `-c credential.helper=` so git never opens an interactive prompt.
 - Never write the token into repo config; read it from `secrets.cmd` / `GITHUB_TOKEN` and redact it from output.
+- **Clone with inline auth leaves the token in `.git/config`** — `git clone https://<user>:<token>@github.com/...` stores that URL as the `origin` remote, and `git remote -v` prints the plaintext token. After any inline-auth clone, immediately run `git remote set-url origin https://github.com/<owner>/<repo>.git` to strip the token, and never run `git remote -v` before that. For push, prefer `-c credential.helper=` + inline URL on the `push` command itself (token lives only in that one command's argv, never in config).
+- **Real proxy is `127.0.0.1:7897`, not `127.0.0.1:9`** — the stale-proxy note above is legacy; the current proxy is `7897` (registry `ProxyEnable=1`). GitHub requires it (`-c http.proxy=http://127.0.0.1:7897`), Gitee connects directly (no proxy).
 - Error meanings:
   - `remote: Invalid username or token` = token is wrong/expired.
   - `remote: Permission to <repo> denied` = token is valid but lacks write access; use a classic PAT with `repo`
