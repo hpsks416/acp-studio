@@ -207,7 +207,9 @@ def parse_status_branch(line: str) -> tuple[str, int, int]:
     m = re.match(r"^## (?:No commits yet on )?([^\[]+?)\s*(?:\[(.*)\])?$", line)
     if not m:
         return "", 0, 0
-    branch = m.group(1).strip().rstrip(".")
+    branch = m.group(1).strip()
+    if "..." in branch:
+        branch = branch.split("...", 1)[0]
     ahead = behind = 0
     detail = m.group(2) or ""
     am = re.search(r"ahead (\d+)", detail)
