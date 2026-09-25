@@ -2,10 +2,11 @@
 
 本地统一的 GitHub/Gitee 提交与双向同步面板：合并了 git-acp / gitee-acp / gh-gitee-sync 三个 skill，一键提交、推送并做双向同步。
 
-## 适用对象
+## 环境依赖
 
-- DeepSeek Harness（DSH）用户：一个可由 AI agent 按需自动加载的 skill，克隆即用、无需构建。
-- 需要提交/推送/同步代码到 GitHub 或 Gitee 的开发者
+- 操作系统：Windows
+- 运行时：Python 3（标准库）
+- 第三方软件：git
 
 ## 目录结构
 
